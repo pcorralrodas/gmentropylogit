@@ -202,11 +202,12 @@ void predict_gme (string scalar xname,
 	
 	X =st_data(., tokens(xname), touse)
 	Po=st_data(., tokens(prior), touse)
+	Po = Po,(1:-Po)
 	X=X,J(rows(X),1,1)
 	st_view(newvar,., tokens(pname), touse)
 	beta=st_matrix(bname)
-	
-	newvar[.,1]=(Po:*exp(quadcross(X',beta'))):/((Po:*exp(quadcross(X',beta'))))	
+
+	newvar[.,1]=(Po[.,1]:*exp(quadcross(X',beta'))):/((Po[.,2]+Po[.,1]:*exp(quadcross(X',beta'))))	
 }
 end
 *mata:mata clear
@@ -291,7 +292,7 @@ void gme_discretemfx(string scalar yname,
 	lnf0=optimize_result_value0(s)
 			
 	// MFX: Generate Probabilities
-	p=(Po1:*exp(quadcross(X',beta'))):/(quadrowsum(Po1:*exp(quadcross(X',beta'))))
+	p=(Po1[.,1]:*exp(quadcross(-X',beta'))):/(Po1[.,2]:+Po1[.,1]:*exp(quadcross(-X',beta')))
 	PxP = p:*(J(rows(p),cols(p),1)-p)
 	MFX = mean(quadcross(PxP',beta))
 	
@@ -309,9 +310,12 @@ void gme_discretemfx(string scalar yname,
 			x1[,i] = J(N,1,1)
 			x0 = X
 			x0[,i] = J(N,1,0)
+			beta
+
 			
-			p1 = (Po1:*exp(quadcross(x1',beta'))):/quadrowsum(Po1:*exp(quadcross(x1',beta')))			
-			p0 = (Po1:*exp(quadcross(x0',beta'))):/quadrowsum(Po1:*exp(quadcross(x0',beta')))
+			p1 = (Po1[.,1]:*exp(quadcross(x1',beta'))):/(Po1[.,2]+(Po1[.,1]:*exp(quadcross(x1',beta'))))	
+			
+			p0 = (Po1[.,1]:*exp(quadcross(x0',beta'))):/(Po1[.,2]+(Po1[.,1]:*exp(quadcross(x0',beta'))))
 			
 			MFX[,i] = mean(p1) - mean(p0)
 			
@@ -400,8 +404,6 @@ void gme_discrete(string scalar yname,
 	lnf0=optimize_result_value0(s)
 			
 	// Normalized entropy	
-	display("UUUY")
-	beta
 	
 	P=(Po1[.,1]:*exp(quadcross(-X',beta'))):/(Po1[.,2]:+Po1[.,1]:*exp(quadcross(-X',beta')))
 	
