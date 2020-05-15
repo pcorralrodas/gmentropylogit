@@ -1,7 +1,7 @@
 
 *! gmentropylogit 1.0.1 November 10, 2013 PC & MT
 
-
+cap prog drop gmentropylogit
 program define gmentropylogit, eclass
 	version 11.2
 	syntax varlist(min=2 numeric fv) [if] [in] [,Mfx GENerate(string) Priors(varlist numeric max=1)]
@@ -49,30 +49,26 @@ _rmcoll `indeps' if `touse', forcedrop
 local indeps  `r(varlist)'
 
 
-if "`mfx'"=="mfx" {
-
-//Indicate dummy variables for MFX
-local words=wordcount("`indeps'")
-tempname dummy
-matrix `dummy'=J(1,`words',0)
-
-	forvalues x= 1/`words'{ 
-
-		capture assert ``x''==1 | ``x''==0
-			if  _rc==0 {
-			qui: tab ``x''
-				if r(r)==2{
-			matrix `dummy'[1,`x']=1
-				}
-			}
-		}
+	if "`mfx'"=="mfx" {
+		//Indicate dummy variables for MFX
+		local words=wordcount("`indeps'")
+		tempname dummy
+		matrix `dummy'=J(1,`words',0)
 		
-	mata: gme_discretemfx("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
-}
-else{
-	mata: gme_discrete("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
+		forvalues x= 1/`words'{ 		
+			capture assert ``x''==1 | ``x''==0
+				if  _rc==0 {
+					qui: tab ``x''
+					if r(r)==2{
+						matrix `dummy'[1,`x']=1
+					}
+				}
+		}				
+		mata: gme_discretemfx("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
 	}
-
+	else{
+		mata: gme_discrete("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
+	}
 
 	
 tempname b b2 V
@@ -210,7 +206,7 @@ void predict_gme (string scalar xname,
 	st_view(newvar,., tokens(pname), touse)
 	beta=st_matrix(bname)
 	
-	newvar[.,1]=(Po:*exp(quadcross(X',beta'))):/((1:-Po)+(Po:*exp(quadcross(X',beta'))))	
+	newvar[.,1]=(Po:*exp(quadcross(X',beta'))):/((Po:*exp(quadcross(X',beta'))))	
 }
 end
 *mata:mata clear
@@ -227,16 +223,16 @@ function MEdiscrete(todo, R, Y, X, v, Po, L, g, H)
 	PSI=J(rows(Y), cols(Y),rows(v))
 	B=J(1,cols(X),0)\colshape(R, cols(X))
 	
-	
 	P1=quadcross(X',B')
 	
+	w0 = 1/3,1/3,1/3
 	for (i=2; i<=cols(P1); i++){
-		PSI[.,i]=rowsum(exp(-(quadcross(P1[.,i]',v'))))
+		PSI[.,i]=quadrowsum(w0:*exp(-(quadcross(P1[.,i]',v'))))
 	}
 	
-	P=rowsum((Po:*exp(-P1)))
+	P=quadrowsum((Po:*exp(-P1)))
 	
-	L=-(sum(colsum((P1):*Y))+sum(ln(P))+sum(ln(PSI)))
+	L=-(quadsum(quadcolsum((P1):*Y))+quadsum(ln(P))+quadsum(ln(PSI)))
 }
 end
 *mata:mata clear
@@ -260,7 +256,7 @@ void gme_discretemfx(string scalar yname,
 	Y=st_data(., tokens(yname), touse)
 	X=st_data(., tokens(xname), touse)
 	Po1=st_data(., tokens(priors), touse)
-	
+	Po1 = Po1,(1:-Po1)
 	//Add constant term
 	X = X, J(rows(X),1,1)
 	
@@ -295,7 +291,7 @@ void gme_discretemfx(string scalar yname,
 	lnf0=optimize_result_value0(s)
 			
 	// MFX: Generate Probabilities
-	p = (Po1:*exp(quadcross(X', beta'))):/(Po1:*exp(quadcross(X', beta'))+(1:-Po1))
+	p=(Po1:*exp(quadcross(X',beta'))):/(quadrowsum(Po1:*exp(quadcross(X',beta'))))
 	PxP = p:*(J(rows(p),cols(p),1)-p)
 	MFX = mean(quadcross(PxP',beta))
 	
@@ -314,8 +310,8 @@ void gme_discretemfx(string scalar yname,
 			x0 = X
 			x0[,i] = J(N,1,0)
 			
-			p1 = (Po1:*exp(quadcross(x1',beta'))):/(exp(quadcross(x1',beta'))+(1:-Po1))			
-			p0 = (Po1:*exp(quadcross(x0',beta'))):/(exp(quadcross(x0',beta'))+(1:-Po1))
+			p1 = (Po1:*exp(quadcross(x1',beta'))):/quadrowsum(Po1:*exp(quadcross(x1',beta')))			
+			p0 = (Po1:*exp(quadcross(x0',beta'))):/quadrowsum(Po1:*exp(quadcross(x0',beta')))
 			
 			MFX[,i] = mean(p1) - mean(p0)
 			
@@ -373,7 +369,7 @@ void gme_discrete(string scalar yname,
 	Y  =st_data(., tokens(yname), touse)
 	X  =st_data(., tokens(xname), touse)
 	Po1=st_data(., tokens(priors), touse)
-	
+	Po1 = Po1,(1:-Po1)
 	//Add constant term
 	X = X,J(rows(X),1,1)
 	
@@ -404,7 +400,11 @@ void gme_discrete(string scalar yname,
 	lnf0=optimize_result_value0(s)
 			
 	// Normalized entropy	
-	P=(Po1:*exp(quadcross(X',beta'))):/((1:-Po1)+(Po1:*exp(quadcross(X',beta'))))
+	display("UUUY")
+	beta
+	
+	P=(Po1[.,1]:*exp(quadcross(-X',beta'))):/(Po1[.,2]:+Po1[.,1]:*exp(quadcross(-X',beta')))
+	
 	S=-(sum(P:*log(P))+sum((1:-P):*log((1:-P))))
 	Sp=S/(rows(X)*log(cols(Y)))
 			

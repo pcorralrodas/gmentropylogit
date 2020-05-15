@@ -47,8 +47,6 @@ program define gmemultinomial, eclass
 	}
 	
 
-	
-
 	// Local for dependent variable
 	local depend `1'
 	// obtain the independent variables
@@ -92,13 +90,10 @@ local eqns `baseoutcome' `eqns'
 		
 
 if "`check'"==""{
-
-
 	tokenize `eqns'
 	macro shift
 	local eqnames `*'
-	}
-	
+}	
 else{
 	tokenize `eqns'
 	macro shift 
@@ -107,24 +102,24 @@ else{
 	foreach x of local EQ{
 		local nm: label `check' `x'
 		local wc=wordcount("`nm'")
-			if `wc'!=1{
-				local a=1
+		if `wc'!=1{
+			local a=1
 			foreach z of local nm{
 				if `a'!=1{
 					local AH `AH'_`z'
-					}
+				}
 				else{
 					local AH `z'
-					}
+				}
 				local a=`a'+1
 			}
 			local eqnames `eqnames' `AH'
-			}
+		}
 		else{
-		local eqnames `eqnames' `nm'
+			local eqnames `eqnames' `nm'
 		}
-		}
-		}
+	}
+}
 
 **
 ** Names for matrices	
@@ -338,7 +333,7 @@ mata set matastrict off
 
 // Multinomial GME optimization Jan 21, 2015
 
-function multidis (todo, R, Y, X,v, L, g, H)  ///J categories
+function multidis (todo, R, Y, X,v, Po, L, g, H)  ///J categories
 {
 
 	B=J(1,cols(X),0)\colshape(R, cols(X))
@@ -351,7 +346,7 @@ function multidis (todo, R, Y, X,v, L, g, H)  ///J categories
 	omega=rowsum(Po:*exp(-P1))
 	psi=rowsum(exp(vec(-P1)*v'))
 	
-		p=vec(exp(-P1):/omega)
+		p=vec((Po:*exp(-P1)):/omega)
 		w=exp(vec(-P1)*v'):/psi
 		
 		
