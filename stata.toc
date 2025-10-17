@@ -1,0 +1,7 @@
+v 1
+d Materials by Paul Andres Corral Rodas & Mungo Terbish (American University)
+d The World Bank
+d pcorralrodas@worldbank.org
+d 
+ 
+p gmentropylogit

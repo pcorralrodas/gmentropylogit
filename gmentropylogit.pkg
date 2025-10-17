@@ -1,0 +1,8 @@
+v 1
+d 'gmentropylogit': Stata command for Generalized Maximum Entropy Logit with Priors
+d 
+d Distribution-Date: 9/4/2024
+d 
+d 
+F g/gmentropylogit.ado
+F g/gmentropylogit.sthlp
