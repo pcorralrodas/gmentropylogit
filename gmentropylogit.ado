@@ -1,4 +1,4 @@
-
+*! gmentropylogit 2.0 February, 2021 PC & MT -> added priors to the code
 *! gmentropylogit 1.0.1 November 10, 2013 PC & MT
 
 cap prog drop gmentropylogit
@@ -64,10 +64,10 @@ local indeps  `r(varlist)'
 					}
 				}
 		}				
-		mata: gme_discretemfx("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
+		qui:mata: gme_discretemfx("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
 	}
 	else{
-		mata: gme_discrete("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
+		qui:mata: gme_discrete("`depvars'", "`indeps'", "`dummy'", "`priors'", "`touse'")
 	}
 
 	
@@ -292,13 +292,13 @@ void gme_discretemfx(string scalar yname,
 	lnf0=optimize_result_value0(s)
 			
 	// MFX: Generate Probabilities
-	p=(Po1[.,1]:*exp(quadcross(-X',beta'))):/(Po1[.,2]:+Po1[.,1]:*exp(quadcross(-X',beta')))
+	p   = (Po1[.,1]:*exp(quadcross(-X',beta'))):/(Po1[.,2]:+Po1[.,1]:*exp(quadcross(-X',beta')))
 	PxP = p:*(J(rows(p),cols(p),1)-p)
 	MFX = mean(quadcross(PxP',beta))
 	
 	// Delta method for MFX covar		
 	dfdz = (J(N,1,1)-p:*2):*PxP
-	dfdB=X:*dfdz
+	dfdB = X:*dfdz
 	G = quadcross(beta,mean(dfdB))
 		
 	for(i=1; i<=K; i++)	G[i,i]=G[i,i]+mean(PxP)			
@@ -425,7 +425,3 @@ end
 
 
 	
-
-
-
-
